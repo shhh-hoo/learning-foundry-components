@@ -38,4 +38,6 @@ new versioned family schemas
 existing stable base protocol
 ```
 
-Do not change the base protocol to accommodate one component-specific payload. Prefer family schemas, namespaced `EXT:*` actions/events, transport adapters, or Foundry orchestration before proposing a protocol change.
+The base protocol intentionally standardizes only the durable seams: exact identity/version, capability discovery/fit, schema-bound JSON payloads, request-response vs interactive execution, invocation correlation, lifecycle controls/events, and conformance rules.
+
+Do not change the base protocol to accommodate one component-specific payload. Prefer family schemas, namespaced `EXT:*` actions/events/controls, transport adapters, or Foundry orchestration before proposing a protocol change.
