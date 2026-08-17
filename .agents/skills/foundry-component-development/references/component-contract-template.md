@@ -50,16 +50,19 @@ export const manifest: ComponentCapabilityManifest = {
       configurationSchema: {
         id: "foundry.example.config",
         version: "1.0.0",
+        format: "JSON_SCHEMA",
       },
       resultSchema: {
         id: "foundry.example.result",
         version: "1.0.0",
+        format: "JSON_SCHEMA",
       },
       stateSchema: {
         id: "foundry.example.state",
         version: "1.0.0",
+        format: "JSON_SCHEMA",
       },
-      supportedControls: ["RESET", "RESTORE"],
+      supportedControls: ["RESET", "RESTORE", "CANCEL"],
       limitations: [],
     },
   ],
@@ -84,6 +87,10 @@ state schema
 ```
 
 Family-specific observation/event payloads should use their own schema IDs.
+
+`JSON_SCHEMA` is the baseline interchange format so Agent/Codex/runtime tooling can inspect configuration and evidence shapes without importing component implementation code. Local code may additionally use Zod, TypeScript types, or other validators.
+
+Protocol payload data must stay JSON-serializable. Refer to binary/media assets by stable IDs/URLs/asset references rather than passing browser-specific objects through the generic protocol.
 
 Prefer stable versioned schema identities such as:
 
@@ -130,6 +137,7 @@ const execution = {
     schema: {
       id: "foundry.example.config",
       version: "1.0.0",
+      format: "JSON_SCHEMA",
     },
     data: {},
   },
@@ -151,6 +159,7 @@ RESET
 RESTORE
 PAUSE
 RESUME
+CANCEL
 
 Component -> Host:
 READY
@@ -158,6 +167,7 @@ OBSERVATION
 ATTEMPT_SUBMITTED
 STATE_CHANGED
 COMPLETED
+CANCELLED
 ERROR
 ```
 
@@ -172,11 +182,13 @@ Before declaring the component complete:
 [ ] family configuration schema validation passes
 [ ] family result schema validation passes
 [ ] exact version is used at execution
+[ ] all generic payloads are JSON-serializable
 [ ] Component Lab uses PREVIEW mode
 [ ] success fixture
 [ ] partial/incorrect fixture where relevant
 [ ] reset fixture where relevant
 [ ] restore fixture where supported
+[ ] cancel/abandon flow where relevant
 [ ] keyboard/accessibility basics
 [ ] structured evidence output
 [ ] open-source provenance/license recorded
