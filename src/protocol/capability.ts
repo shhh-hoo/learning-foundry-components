@@ -1,0 +1,148 @@
+// Stable generic capability discovery / fit contract.
+// Component-family-specific payloads belong behind schema references, not in this file.
+
+export type ComponentProtocolName = "foundry-component";
+export const COMPONENT_PROTOCOL_NAME: ComponentProtocolName = "foundry-component";
+
+export type ComponentProtocolVersion = "1.0.0";
+export const COMPONENT_PROTOCOL_VERSION: ComponentProtocolVersion = "1.0.0";
+
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue =
+  | JsonPrimitive
+  | readonly JsonValue[]
+  | { readonly [key: string]: JsonValue };
+
+export type CapabilityCoverage =
+  | "EXACT_MATCH"
+  | "PARTIAL_MATCH"
+  | "UNSUPPORTED";
+
+export type CoreLearningAction =
+  | "RECALL"
+  | "DISCRIMINATE"
+  | "CONNECT"
+  | "SEQUENCE"
+  | "PREDICT"
+  | "MANIPULATE"
+  | "CONSTRUCT"
+  | "CALCULATE"
+  | "DIAGNOSE"
+  | "PLAN"
+  | "INTERPRET"
+  | "EXPLAIN"
+  | "TRANSFER";
+
+/**
+ * Core actions are intentionally small and stable. Experimental/domain-specific
+ * actions may use an EXT: namespace without changing the base protocol.
+ */
+export type ExtensionLearningAction = `EXT:${string}`;
+export type LearningAction = CoreLearningAction | ExtensionLearningAction;
+
+export type CapabilityExecutionModel =
+  | "REQUEST_RESPONSE"
+  | "INTERACTIVE";
+
+export type CoreInteractiveControl =
+  | "RESET"
+  | "RESTORE"
+  | "PAUSE"
+  | "RESUME"
+  | "CANCEL";
+
+/** Family-specific host controls may be namespaced without changing v1. */
+export type ExtensionInteractiveControl = `EXT:${string}`;
+export type InteractiveControl = CoreInteractiveControl | ExtensionInteractiveControl;
+
+export type SchemaFormat = "JSON_SCHEMA" | `EXT:${string}`;
+
+/**
+ * A protocol-level pointer to a separately owned machine-readable schema.
+ * JSON Schema is the baseline interchange format; local implementations may also
+ * use Zod/TypeScript/etc. as long as a protocol-visible schema can be resolved.
+ */
+export interface SchemaReference {
+  readonly id: string;
+  readonly version: string;
+  readonly format: SchemaFormat;
+  /** Optional resolvable location; a registry may resolve id+version instead. */
+  readonly uri?: string;
+}
+
+/**
+ * Describes a host -> component control the capability accepts. Core controls have
+ * fixed protocol semantics; EXT controls may bind a family-owned payload schema.
+ */
+export interface InteractiveControlDescriptor {
+  readonly type: InteractiveControl;
+  readonly payloadSchema?: SchemaReference;
+}
+
+/**
+ * One independently matchable capability exposed by a component.
+ * Keeping inputs/outputs on the capability avoids ambiguous cartesian products
+ * across component-wide arrays.
+ */
+export interface CapabilityDescriptor {
+  readonly capabilityId: string;
+  readonly learningActions: readonly LearningAction[];
+  readonly executionModel: CapabilityExecutionModel;
+  readonly configurationSchema: SchemaReference;
+  readonly resultSchema: SchemaReference;
+  readonly stateSchema?: SchemaReference;
+  readonly controls?: readonly InteractiveControlDescriptor[];
+  readonly supportedTasks?: readonly string[];
+  readonly supportedInputKinds?: readonly string[];
+  readonly executionRequirements?: readonly string[];
+  readonly limitations?: readonly string[];
+}
+
+export interface ComponentCapabilityManifest {
+  readonly manifestSchemaVersion: ComponentProtocolVersion;
+  readonly componentId: string;
+  /** Exact immutable version of the component implementation. */
+  readonly componentVersion: string;
+  readonly componentType: string;
+  readonly capabilities: readonly CapabilityDescriptor[];
+  readonly executionRequirements?: readonly string[];
+  readonly limitations?: readonly string[];
+}
+
+/**
+ * Foundry describes the need; the component reports fit facts.
+ * Routing/fallback policy remains outside the component.
+ */
+export interface LearningRequestDescriptor {
+  readonly task: string;
+  readonly requestedCapabilityId?: string;
+  readonly learningActions?: readonly LearningAction[];
+  readonly inputKind?: string;
+  readonly targetRefs?: readonly string[];
+  readonly contentKind?: string;
+  readonly constraints?: Readonly<Record<string, JsonValue>>;
+}
+
+export interface CapabilityFitResult {
+  readonly coverage: CapabilityCoverage;
+  readonly componentId: string;
+  readonly componentVersion: string;
+  readonly capabilityId: string;
+  readonly matchDimensions?: Readonly<Record<string, boolean>>;
+  readonly matchedRequirements: readonly string[];
+  readonly missingRequirements: readonly string[];
+  readonly limitations: readonly string[];
+}
+
+/**
+ * Discovery/fit is intentionally separate from execution. A component may expose
+ * several capabilities; preflight returns fit facts for every relevant candidate.
+ * Foundry owns the final routing decision.
+ */
+export interface ComponentCapabilityInspector {
+  readonly manifest: ComponentCapabilityManifest;
+
+  preflight(
+    request: LearningRequestDescriptor,
+  ): readonly CapabilityFitResult[];
+}
