@@ -67,7 +67,11 @@ Instead:
         version: "1.0.0",
         format: "JSON_SCHEMA"
       },
-      supportedControls: ["RESET", "RESTORE", "CANCEL"]
+      controls: [
+        { type: "RESET" },
+        { type: "RESTORE" },
+        { type: "CANCEL" }
+      ]
     }
   ]
 }
@@ -75,7 +79,22 @@ Instead:
 
 The protocol understands schema **identity and interchange format**, not family-specific fields.
 
-This gives Foundry and AI developers enough information to pair a capability with valid configuration/result/state schemas without forcing every component into one giant universal payload.
+For family-specific host controls, the same descriptor can bind an `EXT:*` control to its payload schema:
+
+```ts
+{
+  type: "EXT:SET_HINT_LEVEL",
+  payloadSchema: {
+    id: "foundry.classification.set-hint-level",
+    version: "1.0.0",
+    format: "JSON_SCHEMA"
+  }
+}
+```
+
+Core controls use protocol-defined payload semantics. `RESTORE` uses the capability's `stateSchema`.
+
+This gives Foundry and AI developers enough information to pair a capability with valid configuration/result/state/control schemas without forcing every component into one giant universal payload.
 
 ## 2. Learning actions are a vocabulary, not a closed ontology
 
@@ -258,7 +277,7 @@ For adapters that benefit from a code-level port, v1 also exposes tiny `Componen
 
 ## 7. Minimal interactive lifecycle
 
-Host -> Component uses `ComponentControlMessage`:
+Host -> Component core controls:
 
 ```text
 INIT
@@ -269,9 +288,17 @@ RESUME
 CANCEL
 ```
 
-A capability declares which optional controls it supports. `INIT` carries the governed execution for message-based transports. `CANCEL` gives the host a cross-component way to represent an abandoned/terminated activity without pretending it completed successfully.
+Families may additionally declare:
 
-Component -> Host uses core `ComponentEvent` types:
+```text
+EXT:<FAMILY_CONTROL>
+```
+
+with an optional versioned payload schema in the control descriptor.
+
+`INIT` carries the governed execution for message-based transports. `CANCEL` gives the host a cross-component way to represent an abandoned/terminated activity without pretending it completed successfully.
+
+Component -> Host core events:
 
 ```text
 READY
@@ -282,6 +309,8 @@ COMPLETED
 CANCELLED
 ERROR
 ```
+
+Families may additionally emit namespaced `EXT:*` events.
 
 Do **not** standardize every learner gesture globally.
 
@@ -295,7 +324,7 @@ reasoningStepAdded
 spectrumRegionSelected
 ```
 
-belong in family-specific payload schemas or namespaced `EXT:*` events.
+belong in family-specific payload schemas or namespaced `EXT:*` events/controls.
 
 The base envelope standardizes only:
 
@@ -304,7 +333,7 @@ protocol/version identity
 component/capability identity
 invocation correlation
 timestamp
-event type
+event/control type
 schema-bound JSON payload
 issues/errors
 ```
@@ -395,6 +424,7 @@ force every future component into it
 - non-empty learning-action declarations;
 - valid schema identity/format references;
 - invalid request-response controls;
+- duplicate/invalid control descriptors;
 - RESTORE without a state schema;
 - exact version identity at execution;
 - execution result requirements;
@@ -406,7 +436,9 @@ Examples of enforced semantics include:
 ```text
 COMPLETED result -> must contain schema-bound result
 FAILED result -> must contain issue(s)
-RESTORE support -> must declare state schema
+RESTORE control -> capability must declare state schema
+core control -> cannot redefine its payload schema
+EXT control -> may bind a family payload schema
 ERROR event -> must contain issue(s)
 STATE_CHANGED / ATTEMPT_SUBMITTED / COMPLETED event -> must contain payload
 ```
@@ -426,6 +458,7 @@ The purpose of v1 stability is to make normal component growth **additive**.
 - a new open-source adapter;
 - a new namespaced learning action;
 - a new namespaced event;
+- a new namespaced host control;
 - a new namespaced schema format when genuinely needed;
 - new optional capability metadata;
 - a new content fixture;
@@ -445,7 +478,7 @@ Existing required fields and existing semantics must not be reinterpreted.
 ### Requires a major protocol version
 
 - removing or renaming a required field;
-- changing the meaning of an existing field/event;
+- changing the meaning of an existing field/event/control;
 - making an optional field required for existing components;
 - changing identity/version correlation semantics;
 - changing schema-bound payload interpretation;
@@ -455,7 +488,7 @@ When a component appears to require a base change, first ask whether the need be
 
 ```text
 family schema
-namespaced event/action
+namespaced event/action/control
 transport adapter
 Foundry orchestration
 ```
@@ -485,7 +518,7 @@ LearningCapabilityExecution
 REQUEST_RESPONSE result
 or INTERACTIVE lifecycle
         ↓
-resolve + validate result/event payload schema
+resolve + validate result/event/control payload schemas
 ```
 
 This is intentionally easier for AI development than interpreting unrelated prose arrays or reverse-engineering each component's local API.
