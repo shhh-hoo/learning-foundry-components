@@ -19,6 +19,10 @@ function invariant(condition: unknown, message: string): asserts condition {
 function assertSchemaReference(reference: SchemaReference, label: string): void {
   invariant(reference.id.trim().length > 0, `${label}.id must be non-empty.`);
   invariant(SEMVER.test(reference.version), `${label}.version must be semver-like.`);
+  invariant(reference.format !== "EXT:", `${label}.format contains an empty extension format.`);
+  if (reference.uri !== undefined) {
+    invariant(reference.uri.trim().length > 0, `${label}.uri must be non-empty when provided.`);
+  }
 }
 
 function assertExactIdentity(
@@ -94,6 +98,9 @@ export function assertExecutionResultConforms(result: LearningCapabilityExecutio
   invariant(result.invocationId.trim().length > 0, "result.invocationId must be non-empty.");
   invariant(result.traceId.trim().length > 0, "result.traceId must be non-empty.");
   if (result.result) assertSchemaReference(result.result.schema, "result.result.schema");
+  if (result.status === "COMPLETED") {
+    invariant(Boolean(result.result), "COMPLETED execution results must include a schema-bound result.");
+  }
   if (result.status === "FAILED") {
     invariant(Boolean(result.issues?.length), "FAILED execution results must include at least one issue.");
   }
@@ -130,6 +137,10 @@ export function assertComponentEventConforms(event: ComponentEvent): void {
   invariant(!Number.isNaN(Date.parse(event.occurredAt)), "event.occurredAt must be a parseable timestamp.");
   invariant(event.type !== "EXT:", "event.type contains an empty extension event.");
   if (event.payload) assertSchemaReference(event.payload.schema, "event.payload.schema");
+
+  if (["OBSERVATION", "ATTEMPT_SUBMITTED", "STATE_CHANGED", "COMPLETED"].includes(event.type)) {
+    invariant(Boolean(event.payload), `${event.type} events must include a schema-bound payload.`);
+  }
   if (event.type === "ERROR") {
     invariant(Boolean(event.issues?.length), "ERROR events must include at least one issue.");
   }
