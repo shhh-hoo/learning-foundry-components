@@ -3,6 +3,7 @@
 
 import type {
   ComponentProtocolVersion,
+  ExtensionInteractiveControl,
   JsonValue,
   SchemaReference,
 } from "./capability";
@@ -89,6 +90,10 @@ export type ComponentControlMessage =
   | (ComponentControlBase & {
       readonly type: "RESTORE";
       readonly state: SchemaBoundPayload;
+    })
+  | (ComponentControlBase & {
+      readonly type: ExtensionInteractiveControl;
+      readonly payload?: SchemaBoundPayload;
     });
 
 export type CoreComponentEventType =
