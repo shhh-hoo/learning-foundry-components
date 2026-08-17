@@ -38,6 +38,8 @@ export interface LearningCapabilityExecution
     ExactInvocationIdentity {
   readonly runMode: CapabilityRunMode;
   readonly configuration: SchemaBoundPayload;
+  /** Optional state applied atomically as part of INIT before INITIALIZED is emitted. */
+  readonly initialState?: SchemaBoundPayload;
 }
 
 export type LearningCapabilityExecutionStatus =
