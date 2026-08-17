@@ -13,15 +13,20 @@ export type {
   CoreLearningAction,
   ExtensionLearningAction,
   InteractiveControl,
+  JsonPrimitive,
+  JsonValue,
   LearningAction,
   LearningRequestDescriptor,
+  SchemaFormat,
   SchemaReference,
 } from "./capability";
 
 export type {
   CapabilityRunMode,
+  ComponentControlHandler,
   ComponentControlMessage,
   ComponentEvent,
+  ComponentEventSink,
   ComponentEventType,
   CoreComponentEventType,
   ExtensionComponentEventType,
