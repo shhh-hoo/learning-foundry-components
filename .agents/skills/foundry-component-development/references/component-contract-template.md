@@ -1,6 +1,6 @@
 # Component Contract Template
 
-Use this template before implementing a new component family. It is intentionally compact and machine-readable.
+Use this before implementing a new Component family.
 
 ## 1. Learning brief
 
@@ -18,9 +18,9 @@ Likely interaction modalities:
 ## 2. Reuse decision
 
 ```text
-Local primitive/component checked:
+Local Component/primitive checked:
 Open-source candidates checked:
-Chosen reuse mode:
+Decision:
 - REUSE_AS_DEPENDENCY
 - ADAPT_OR_WRAP
 - EXTERNAL_COMPONENT
@@ -30,7 +30,7 @@ Reason:
 License/provenance notes:
 ```
 
-## 3. Capability manifest shape
+## 3. Capability manifest
 
 Use one descriptor per independently matchable capability.
 
@@ -67,15 +67,12 @@ export const manifest: ComponentCapabilityManifest = {
         { type: "RESTORE" },
         { type: "CANCEL" },
       ],
-      limitations: [],
     },
   ],
 };
 ```
 
-Do not place family-specific payload fields in the base manifest. Put them in the referenced family schemas.
-
-For a family-specific host control, bind its payload schema in the descriptor:
+Family-specific host control example:
 
 ```ts
 {
@@ -88,64 +85,76 @@ For a family-specific host control, bind its payload schema in the descriptor:
 }
 ```
 
-Core controls use their protocol-defined payload semantics and must not redefine a payload schema. `RESTORE` uses the capability's `stateSchema`.
+Core controls must not redefine payload schemas. `RESTORE` uses the capability `stateSchema`.
 
 ## 4. Family schemas
 
-Every capability must define at least:
+Required:
 
 ```text
 configuration schema
 result schema
 ```
 
-Interactive stateful capabilities should also define:
+Stateful interactive Component:
 
 ```text
 state schema
 ```
 
-Family-specific observation/event/control payloads should use their own schema IDs.
+Family-specific observation/event/control payloads use separately versioned schema IDs.
 
-`JSON_SCHEMA` is the baseline interchange format so Agent/Codex/runtime tooling can inspect configuration and evidence shapes without importing component implementation code. Local code may additionally use Zod, TypeScript types, or other validators.
-
-Protocol payload data must stay JSON-serializable. Refer to binary/media assets by stable IDs/URLs/asset references rather than passing browser-specific objects through the generic protocol.
-
-Prefer stable versioned schema identities such as:
-
-```text
-foundry.classification.config@1.0.0
-foundry.classification.result@1.0.0
-foundry.classification.state@1.0.0
-foundry.classification.observation@1.0.0
-```
+Use `JSON_SCHEMA` as the protocol-visible format. Keep payloads JSON-serializable and use asset references for binary/media resources.
 
 ## 5. Preflight
 
-`preflight(...)` reports capability facts only:
+Return only fit facts:
 
 ```text
 EXACT_MATCH
 PARTIAL_MATCH
 UNSUPPORTED
-```
-
-and:
-
-```text
 matchedRequirements
 missingRequirements
 limitations
 ```
 
-Do not return routing policy such as "call interpreter" or "fallback to chat". Foundry owns that decision.
+Do not choose interpreter/fallback/chat/plan policy.
 
-## 6. Execution
+## 6. Deployment binding
 
-Before execution, resolve the exact component version.
+Keep launch/runtime metadata separate from capability metadata.
+
+```ts
+import type { ComponentDeploymentBinding } from "../../../src/protocol";
+
+export const deployment: ComponentDeploymentBinding = {
+  bindingSchemaVersion: "1.0.0",
+  componentId: "example-component",
+  componentVersion: "0.1.0",
+  adapterId: "foundry.web-iframe",
+  protocol: "foundry-component",
+  protocolVersion: "1.0.0",
+  runtimeConfiguration: {
+    schema: {
+      id: "foundry.web-iframe.launch",
+      version: "1.0.0",
+      format: "JSON_SCHEMA",
+    },
+    data: {
+      launchUrl: "/components/example/index.html",
+    },
+  },
+};
+```
+
+## 7. Execution
+
+Resolve the exact Component version first.
 
 ```ts
 const execution = {
+  protocol: "foundry-component",
   protocolVersion: "1.0.0",
   invocationId: "...",
   componentId: "example-component",
@@ -160,19 +169,26 @@ const execution = {
     },
     data: {},
   },
+  initialState: {
+    schema: {
+      id: "foundry.example.state",
+      version: "1.0.0",
+      format: "JSON_SCHEMA",
+    },
+    data: {},
+  },
 } as const;
 ```
 
-`REQUEST_RESPONSE` normally returns `COMPLETED` or `FAILED` directly.
+Omit `initialState` when not resuming/initializing from saved state.
 
-`INTERACTIVE` may return `STARTED` and continue through the lifecycle events.
-
-## 7. Interactive lifecycle
-
-Use the base lifecycle only for cross-component semantics:
+## 8. Interactive lifecycle
 
 ```text
-Host -> Component:
+pre-INIT Component -> Host
+READY
+
+Host -> Component
 INIT
 RESET
 RESTORE
@@ -181,8 +197,8 @@ RESUME
 CANCEL
 EXT:<FAMILY_CONTROL>
 
-Component -> Host:
-READY
+post-INIT Component -> Host
+INITIALIZED
 OBSERVATION
 ATTEMPT_SUBMITTED
 STATE_CHANGED
@@ -192,27 +208,33 @@ ERROR
 EXT:<FAMILY_EVENT>
 ```
 
-Do not promote component-local gestures such as `itemMoved`, `bondCreated`, or `parameterChanged` into the generic protocol. Encode them in family-specific payload schemas or namespaced `EXT:*` events/controls.
+`READY` happens before the Component knows `invocationId/capabilityId`. `INITIALIZED` happens after it accepts `INIT`, configuration, and optional initial state.
 
-## 8. Required verification
+Do not promote local gestures such as `itemMoved`, `bondCreated`, or `parameterChanged` into the generic lifecycle.
 
-Before declaring the component complete:
+## 9. Required verification
 
 ```text
-[ ] assertManifestConforms passes
-[ ] family configuration schema validation passes
-[ ] family result schema validation passes
-[ ] exact version is used at execution
-[ ] all generic payloads are JSON-serializable
-[ ] Component Lab uses PREVIEW mode
-[ ] success fixture
-[ ] partial/incorrect fixture where relevant
-[ ] reset fixture where relevant
-[ ] restore fixture where supported
-[ ] cancel/abandon flow where relevant
-[ ] extension control payload schemas where used
+[ ] assertManifestConforms
+[ ] assertDeploymentBindingConforms when deployed
+[ ] family config/result/state schema validation
+[ ] exact componentVersion + capabilityId
+[ ] protocol discriminator/version present
+[ ] all protocol payloads JSON-serializable
+[ ] assertReadyMessageConforms where READY handshake is used
+[ ] INIT -> INITIALIZED flow
+[ ] initialState fixture when stateful
+[ ] reset/restore/cancel fixtures where declared
+[ ] assertControlMessageConforms
+[ ] assertComponentEventConforms
+[ ] assertExecutionResultConforms
+[ ] Component Lab PREVIEW mode
+[ ] success + partial/incorrect fixtures where relevant
 [ ] keyboard/accessibility basics
+[ ] visual QA
 [ ] structured evidence output
 [ ] open-source provenance/license recorded
-[ ] no component-local event bus or persistence protocol invented
+[ ] no Component-local replacement protocol/event bus/persistence layer
 ```
+
+When integrating with `learning-foundry-mvp`, also read `docs/learning-foundry-mvp-v0.1-compatibility.md`.
