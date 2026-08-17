@@ -172,6 +172,10 @@ result schema
 
 Stateful interactive components should also define a state schema. Family-specific observations/events should identify their payload schema.
 
+`JSON_SCHEMA` is the baseline protocol interchange format so Foundry, Codex, and runtime validation can inspect configuration/evidence shapes without importing implementation code. Local code may additionally use Zod/TypeScript/etc.
+
+All generic protocol payloads must be JSON-serializable. Represent binary/media resources by stable asset references rather than passing framework/browser objects across the protocol.
+
 ### Preflight
 
 Preflight reports facts only:
@@ -202,21 +206,9 @@ Never execute `latest` implicitly.
 
 ## 7. Choose the correct execution model
 
-Use:
+Use `REQUEST_RESPONSE` for bounded operations that return directly.
 
-```text
-REQUEST_RESPONSE
-```
-
-for bounded operations that return directly.
-
-Use:
-
-```text
-INTERACTIVE
-```
-
-when a learner remains inside the component while manipulating, retrying, submitting, resetting, or restoring state.
+Use `INTERACTIVE` when a learner remains inside the component while manipulating, retrying, submitting, resetting, restoring state, or exiting early.
 
 For interactive components use the generic lifecycle only for cross-component semantics:
 
@@ -227,6 +219,7 @@ RESET
 RESTORE
 PAUSE
 RESUME
+CANCEL
 
 Component -> Host
 READY
@@ -234,6 +227,7 @@ OBSERVATION
 ATTEMPT_SUBMITTED
 STATE_CHANGED
 COMPLETED
+CANCELLED
 ERROR
 ```
 
@@ -305,6 +299,7 @@ incorrect / partial response
 repeated attempt
 reset
 restore when supported
+cancel/abandon when relevant
 malformed/unsupported input
 narrow/mobile viewport
 keyboard interaction
@@ -323,7 +318,7 @@ changes/retries
 assistance used
 component-computed correctness/constraints
 target/configuration identity
-completion/error/timing signals
+completion/cancellation/error/timing signals
 ```
 
 Do not invent durable claims such as:
@@ -342,16 +337,17 @@ Before declaring complete:
 
 1. run `assertManifestConforms`;
 2. validate family configuration/result/state schemas;
-3. ensure execution uses an exact component version;
-4. run base execution/event/control conformance where applicable;
-5. run unit/type/build/lint checks available in the repo;
-6. verify Component Lab fixtures;
-7. verify reset/restore for declared controls;
-8. verify keyboard/accessibility basics;
-9. inspect the rendered visual interaction;
-10. record reused source/license/provenance;
-11. confirm no local event bus/persistence/Agent protocol was invented;
-12. confirm no direct LLM dependency unless explicitly required by architecture.
+3. ensure protocol payload data is JSON-serializable;
+4. ensure execution uses an exact component version;
+5. run base execution/result/event/control conformance where applicable;
+6. run unit/type/build/lint checks available in the repo;
+7. verify Component Lab fixtures;
+8. verify reset/restore/cancel for declared controls;
+9. verify keyboard/accessibility basics;
+10. inspect the rendered visual interaction;
+11. record reused source/license/provenance;
+12. confirm no local event bus/persistence/Agent protocol was invented;
+13. confirm no direct LLM dependency unless explicitly required by architecture.
 
 ## 13. Completion report
 
@@ -389,6 +385,7 @@ Do not:
 - invent a component-specific event bus or persistence layer;
 - let preflight make Foundry routing policy;
 - execute an unresolved/latest component version;
+- pass non-serializable framework/browser objects through the generic protocol;
 - return only `correct: true/false` when richer bounded evidence is naturally available;
 - claim mastery from one activity;
 - redesign Foundry Core inside a component task.
