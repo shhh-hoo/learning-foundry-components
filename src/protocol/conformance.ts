@@ -65,6 +65,10 @@ export function assertManifestConforms(manifest: ComponentCapabilityManifest): v
       capability.learningActions.every((action) => action !== "EXT:"),
       `${label}.learningActions contains an empty extension action.`,
     );
+    invariant(
+      capability.supportedControls?.every((control) => control !== "EXT:") ?? true,
+      `${label}.supportedControls contains an empty extension control.`,
+    );
     assertSchemaReference(capability.configurationSchema, `${label}.configurationSchema`);
     assertSchemaReference(capability.resultSchema, `${label}.resultSchema`);
     if (capability.stateSchema) assertSchemaReference(capability.stateSchema, `${label}.stateSchema`);
@@ -113,6 +117,7 @@ export function assertControlMessageConforms(message: ComponentControlMessage): 
   );
   invariant(message.messageId.trim().length > 0, "control.messageId must be non-empty.");
   assertExactIdentity(message, "control");
+  invariant(message.type !== "EXT:", "control.type contains an empty extension control.");
 
   if (message.type === "INIT") {
     assertExecutionConforms(message.execution);
@@ -124,6 +129,10 @@ export function assertControlMessageConforms(message: ComponentControlMessage): 
 
   if (message.type === "RESTORE") {
     assertSchemaReference(message.state.schema, "control.state.schema");
+  }
+
+  if ("payload" in message && message.payload) {
+    assertSchemaReference(message.payload.schema, "control.payload.schema");
   }
 }
 
