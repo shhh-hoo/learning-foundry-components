@@ -1,10 +1,40 @@
 # Component Protocol
 
-This directory owns the smallest generic contract needed for Learning Foundry to execute a governed learning capability.
+This directory owns the smallest generic contract needed for Learning Foundry to **discover/match** and then **execute** a governed learning capability.
 
-## Current canonical seam
+The protocol is intentionally split into two layers because that is what the existing real code already implies.
 
-`runtime.ts` intentionally mirrors the current Foundry application seam:
+## Layer 1 — capability discovery / fit
+
+`capability.ts` generalizes the capability-fit semantics that already exist in `shhh-hoo/standard-trainer-demo`:
+
+```text
+ComponentCapabilityManifest
+        +
+LearningRequestDescriptor
+        ↓
+preflight(...)
+        ↓
+EXACT_MATCH
+PARTIAL_MATCH
+UNSUPPORTED
+```
+
+The historical/current Standard Trainer implementation also uses:
+
+```text
+INVOKE_COMPONENT
+REQUIRE_INTERPRETER
+DO_NOT_INVOKE
+```
+
+Those semantics are preserved because they provide an honest boundary between what a component can execute and what Foundry must handle elsewhere.
+
+The new generic contract deliberately removes trainer-specific assumptions such as one chemistry curriculum, one numerical problem definition, and calculation-specific input types.
+
+## Layer 2 — governed execution
+
+`runtime.ts` mirrors the current Foundry application execution seam:
 
 ```ts
 export interface LearningCapabilityExecution {
@@ -26,11 +56,25 @@ export interface LearningCapabilityRuntime {
 }
 ```
 
-The source-of-truth version was migrated from `shhh-hoo/learning-foundry-demo` rather than reconstructed from old chat notes.
+This was migrated from `shhh-hoo/learning-foundry-demo/main/src/core/ports/learning-capability-runtime.ts`, not reconstructed from chat history.
+
+The intended overall boundary is therefore:
+
+```text
+Foundry request
+      ↓
+manifest + preflight
+      ↓
+capability fit / routing decision
+      ↓
+LearningCapabilityRuntime.execute(...)
+      ↓
+traceable structured result
+```
 
 ## What was deliberately NOT promoted into the generic protocol
 
-The old/current Foundry code also contains a rich `DiagnosticLearningComponent` contract for deterministic chemistry calculation diagnosis. It includes authored facts, targets, formula ASTs, reasoning graphs, diagnosis categories, hint policy, mark schemes, provenance, expert review, and publication metadata.
+The existing Foundry/Standard Trainer code contains a rich `DiagnosticLearningComponent` family contract for deterministic chemistry calculation diagnosis. It includes authored facts, targets, formula ASTs, reasoning graphs, diagnosis categories, hint policy, mark schemes, provenance, expert review, and publication metadata.
 
 That schema is valuable, but it is a **component-family contract**, not a universal definition of every learning component.
 
@@ -42,12 +86,12 @@ A sorting/classification workspace should not be forced to pretend it has:
 - a mark scheme;
 - Kp/MASS target kinds.
 
-Likewise, a simulation or mechanism builder needs evidence shapes that the calculation trainer does not.
+Likewise, a simulation, data workspace, or mechanism builder needs evidence shapes that the calculation trainer does not.
 
 Therefore:
 
 ```text
-generic runtime seam
+generic capability + runtime protocol
         ↓
 component-family schema
         ↓
@@ -62,23 +106,15 @@ calculation trainer schema
 force every component into it
 ```
 
-## Historical `manifest / preflight / invoke` idea
+## Why `invoke(...)` is not copied as the universal execution API
 
-Earlier Foundry design work used a conceptual interface like:
+The current Standard Trainer has a synchronous `LearningComponent.invoke(...)` interface because it is a bounded deterministic diagnosis component.
 
-```ts
-interface LearningComponent {
-  readonly manifest: ComponentManifest;
-  preflight(request: LearningRequestDescriptor): CapabilityFitResult;
-  invoke(request: ComponentInvocation): ComponentInvocationResult;
-}
-```
+That does not automatically fit an interactive component that may remain open while a learner drags, edits, predicts, retries, restores state, and only later submits an attempt.
 
-The important design insight remains useful: capability coverage should be explicit and honest, and Foundry should distinguish exact/partial/unsupported fits.
+So this repository preserves the useful **manifest/preflight capability-fit semantics**, while keeping the generic execution seam at `LearningCapabilityRuntime.execute(...)` until interactive lifecycle requirements are designed from real components.
 
-However, the current codebase no longer uses that exact interface as the canonical runtime seam. Do not resurrect it in parallel merely because it exists in historical design notes.
-
-If richer discovery/inspection metadata is needed in this repository, design it as a deliberate protocol extension and then update the consuming Foundry boundary, rather than creating a second incompatible contract.
+Do not invent a second ad-hoc runtime protocol inside one component. If interactive session lifecycle needs a shared contract, add the smallest deliberate protocol extension here and update Foundry consumers together.
 
 ## Responsibility boundary
 
