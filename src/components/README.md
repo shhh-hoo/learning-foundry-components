@@ -27,4 +27,23 @@ Examples of component families:
 - Answer Reconstruction Trainer
 - Memorization / Retrieval Trainer
 
-Each component should declare honest limitations, use shared primitives where possible, and produce bounded structured observations/results that Foundry can consume without the component owning long-term learner-state decisions.
+Each component family should own:
+
+```text
+manifest
+  -> capabilities[]
+
+versioned family schemas
+  -> configuration
+  -> result
+  -> optional state / observation payloads
+
+implementation / adapters
+fixtures + tests
+Component Lab preview
+reuse/provenance note
+```
+
+One component may expose several independently matchable capabilities, but each capability must bind its own learning actions, execution model, and schema references. Do not publish unrelated component-wide input/output arrays and expect Foundry or an AI agent to infer the pairing.
+
+Each component should declare honest limitations, use shared primitives where possible, pass base protocol conformance, and produce bounded structured observations/results without owning long-term learner-state decisions.
