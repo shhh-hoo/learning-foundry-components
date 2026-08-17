@@ -4,6 +4,12 @@
 export type ComponentProtocolVersion = "1.0.0";
 export const COMPONENT_PROTOCOL_VERSION: ComponentProtocolVersion = "1.0.0";
 
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue =
+  | JsonPrimitive
+  | readonly JsonValue[]
+  | { readonly [key: string]: JsonValue };
+
 export type CapabilityCoverage =
   | "EXACT_MATCH"
   | "PARTIAL_MATCH"
@@ -39,15 +45,22 @@ export type InteractiveControl =
   | "RESET"
   | "RESTORE"
   | "PAUSE"
-  | "RESUME";
+  | "RESUME"
+  | "CANCEL";
+
+export type SchemaFormat = "JSON_SCHEMA" | `EXT:${string}`;
 
 /**
- * A protocol-level pointer to a separately owned schema.
- * The base protocol never needs to know the component-family payload shape.
+ * A protocol-level pointer to a separately owned machine-readable schema.
+ * JSON Schema is the baseline interchange format; local implementations may also
+ * use Zod/TypeScript/etc. as long as a protocol-visible schema can be resolved.
  */
 export interface SchemaReference {
   readonly id: string;
   readonly version: string;
+  readonly format: SchemaFormat;
+  /** Optional resolvable location; a registry may resolve id+version instead. */
+  readonly uri?: string;
 }
 
 /**
@@ -91,7 +104,7 @@ export interface LearningRequestDescriptor {
   readonly inputKind?: string;
   readonly targetRefs?: readonly string[];
   readonly contentKind?: string;
-  readonly constraints?: Readonly<Record<string, unknown>>;
+  readonly constraints?: Readonly<Record<string, JsonValue>>;
 }
 
 export interface CapabilityFitResult {
