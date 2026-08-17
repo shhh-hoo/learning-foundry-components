@@ -1,11 +1,16 @@
-import { COMPONENT_PROTOCOL_VERSION } from "./capability";
+import {
+  COMPONENT_PROTOCOL_NAME,
+  COMPONENT_PROTOCOL_VERSION,
+} from "./capability";
 import type {
   ComponentCapabilityManifest,
   SchemaReference,
 } from "./capability";
+import type { ComponentDeploymentBinding } from "./deployment";
 import type {
   ComponentControlMessage,
   ComponentEvent,
+  ComponentReadyMessage,
   LearningCapabilityExecution,
   LearningCapabilityExecutionResult,
 } from "./runtime";
@@ -23,6 +28,14 @@ function assertSchemaReference(reference: SchemaReference, label: string): void 
   if (reference.uri !== undefined) {
     invariant(reference.uri.trim().length > 0, `${label}.uri must be non-empty when provided.`);
   }
+}
+
+function assertProtocolEnvelope(
+  value: { readonly protocol: string; readonly protocolVersion: string },
+  label: string,
+): void {
+  invariant(value.protocol === COMPONENT_PROTOCOL_NAME, `${label}.protocol must be ${COMPONENT_PROTOCOL_NAME}.`);
+  invariant(value.protocolVersion === COMPONENT_PROTOCOL_VERSION, `${label}.protocolVersion must be ${COMPONENT_PROTOCOL_VERSION}.`);
 }
 
 function assertExactIdentity(
@@ -93,21 +106,27 @@ export function assertManifestConforms(manifest: ComponentCapabilityManifest): v
   }
 }
 
-export function assertExecutionConforms(execution: LearningCapabilityExecution): void {
+export function assertDeploymentBindingConforms(binding: ComponentDeploymentBinding): void {
   invariant(
-    execution.protocolVersion === COMPONENT_PROTOCOL_VERSION,
-    `protocolVersion must be ${COMPONENT_PROTOCOL_VERSION}.`,
+    binding.bindingSchemaVersion === COMPONENT_PROTOCOL_VERSION,
+    `bindingSchemaVersion must be ${COMPONENT_PROTOCOL_VERSION}.`,
   );
+  invariant(binding.componentId.trim().length > 0, "deployment.componentId must be non-empty.");
+  invariant(SEMVER.test(binding.componentVersion), "deployment.componentVersion must be semver-like.");
+  invariant(binding.adapterId.trim().length > 0, "deployment.adapterId must be non-empty.");
+  assertProtocolEnvelope(binding, "deployment");
+  assertSchemaReference(binding.runtimeConfiguration.schema, "deployment.runtimeConfiguration.schema");
+}
+
+export function assertExecutionConforms(execution: LearningCapabilityExecution): void {
+  assertProtocolEnvelope(execution, "execution");
   assertExactIdentity(execution, "execution");
   assertSchemaReference(execution.configuration.schema, "configuration.schema");
 }
 
 export function assertExecutionResultConforms(result: LearningCapabilityExecutionResult): void {
-  invariant(
-    result.protocolVersion === COMPONENT_PROTOCOL_VERSION,
-    `result protocolVersion must be ${COMPONENT_PROTOCOL_VERSION}.`,
-  );
-  invariant(result.invocationId.trim().length > 0, "result.invocationId must be non-empty.");
+  assertProtocolEnvelope(result, "result");
+  assertExactIdentity(result, "result");
   invariant(result.traceId.trim().length > 0, "result.traceId must be non-empty.");
   if (result.result) assertSchemaReference(result.result.schema, "result.result.schema");
   if (result.status === "COMPLETED") {
@@ -118,11 +137,20 @@ export function assertExecutionResultConforms(result: LearningCapabilityExecutio
   }
 }
 
-export function assertControlMessageConforms(message: ComponentControlMessage): void {
+export function assertReadyMessageConforms(message: ComponentReadyMessage): void {
+  assertProtocolEnvelope(message, "ready");
+  invariant(message.messageId.trim().length > 0, "ready.messageId must be non-empty.");
+  invariant(message.componentId.trim().length > 0, "ready.componentId must be non-empty.");
+  invariant(SEMVER.test(message.componentVersion), "ready.componentVersion must be semver-like.");
+  invariant(!Number.isNaN(Date.parse(message.occurredAt)), "ready.occurredAt must be a parseable timestamp.");
   invariant(
-    message.protocolVersion === COMPONENT_PROTOCOL_VERSION,
-    `control protocolVersion must be ${COMPONENT_PROTOCOL_VERSION}.`,
+    message.supportedProtocolVersions.includes(COMPONENT_PROTOCOL_VERSION),
+    `ready.supportedProtocolVersions must include ${COMPONENT_PROTOCOL_VERSION}.`,
   );
+}
+
+export function assertControlMessageConforms(message: ComponentControlMessage): void {
+  assertProtocolEnvelope(message, "control");
   invariant(message.messageId.trim().length > 0, "control.messageId must be non-empty.");
   assertExactIdentity(message, "control");
   invariant(message.type !== "EXT:", "control.type contains an empty extension control.");
@@ -145,10 +173,7 @@ export function assertControlMessageConforms(message: ComponentControlMessage): 
 }
 
 export function assertComponentEventConforms(event: ComponentEvent): void {
-  invariant(
-    event.protocolVersion === COMPONENT_PROTOCOL_VERSION,
-    `event protocolVersion must be ${COMPONENT_PROTOCOL_VERSION}.`,
-  );
+  assertProtocolEnvelope(event, "event");
   invariant(event.eventId.trim().length > 0, "event.eventId must be non-empty.");
   assertExactIdentity(event, "event");
   invariant(!Number.isNaN(Date.parse(event.occurredAt)), "event.occurredAt must be a parseable timestamp.");
