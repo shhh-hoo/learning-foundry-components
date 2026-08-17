@@ -15,6 +15,7 @@ export type {
   ExtensionInteractiveControl,
   ExtensionLearningAction,
   InteractiveControl,
+  InteractiveControlDescriptor,
   JsonPrimitive,
   JsonValue,
   LearningAction,
