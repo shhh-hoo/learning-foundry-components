@@ -68,6 +68,15 @@ export interface SchemaReference {
 }
 
 /**
+ * Describes a host -> component control the capability accepts. Core controls have
+ * fixed protocol semantics; EXT controls may bind a family-owned payload schema.
+ */
+export interface InteractiveControlDescriptor {
+  readonly type: InteractiveControl;
+  readonly payloadSchema?: SchemaReference;
+}
+
+/**
  * One independently matchable capability exposed by a component.
  * Keeping inputs/outputs on the capability avoids ambiguous cartesian products
  * across component-wide arrays.
@@ -79,7 +88,7 @@ export interface CapabilityDescriptor {
   readonly configurationSchema: SchemaReference;
   readonly resultSchema: SchemaReference;
   readonly stateSchema?: SchemaReference;
-  readonly supportedControls?: readonly InteractiveControl[];
+  readonly controls?: readonly InteractiveControlDescriptor[];
   readonly supportedTasks?: readonly string[];
   readonly supportedInputKinds?: readonly string[];
   readonly executionRequirements?: readonly string[];
