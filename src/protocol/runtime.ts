@@ -2,6 +2,7 @@
 // Component-family-specific payload shapes are referenced, never promoted here.
 
 import type {
+  ComponentProtocolName,
   ComponentProtocolVersion,
   ExtensionInteractiveControl,
   JsonValue,
@@ -16,16 +17,25 @@ export interface SchemaBoundPayload {
   readonly data: JsonValue;
 }
 
-/**
- * Exact identity is required at the execution boundary for reproducibility.
- * Registries may resolve aliases such as "latest" before constructing this object.
- */
-export interface LearningCapabilityExecution {
+interface ProtocolEnvelopeBase {
+  readonly protocol: ComponentProtocolName;
   readonly protocolVersion: ComponentProtocolVersion;
+}
+
+interface ExactInvocationIdentity {
   readonly invocationId: string;
   readonly componentId: string;
   readonly componentVersion: string;
   readonly capabilityId: string;
+}
+
+/**
+ * Exact identity is required at the execution boundary for reproducibility.
+ * Registries may resolve aliases such as "latest" before constructing this object.
+ */
+export interface LearningCapabilityExecution
+  extends ProtocolEnvelopeBase,
+    ExactInvocationIdentity {
   readonly runMode: CapabilityRunMode;
   readonly configuration: SchemaBoundPayload;
 }
@@ -47,9 +57,9 @@ export interface ProtocolIssue {
  * INTERACTIVE capabilities may return STARTED and then continue through the
  * transport-neutral control/event lifecycle below.
  */
-export interface LearningCapabilityExecutionResult {
-  readonly protocolVersion: ComponentProtocolVersion;
-  readonly invocationId: string;
+export interface LearningCapabilityExecutionResult
+  extends ProtocolEnvelopeBase,
+    ExactInvocationIdentity {
   readonly traceId: string;
   readonly status: LearningCapabilityExecutionStatus;
   readonly result?: SchemaBoundPayload;
@@ -58,7 +68,7 @@ export interface LearningCapabilityExecutionResult {
 
 /**
  * Existing Foundry consumers can keep one small execution port. Interactive
- * transports layer control/events around the same invocation identity.
+ * transports layer readiness/control/events around the same invocation identity.
  */
 export interface LearningCapabilityRuntime {
   execute(
@@ -66,13 +76,24 @@ export interface LearningCapabilityRuntime {
   ): Promise<LearningCapabilityExecutionResult>;
 }
 
-interface ComponentControlBase {
-  readonly protocolVersion: ComponentProtocolVersion;
+/**
+ * Optional pre-INIT readiness signal for transports such as sandboxed iframes.
+ * No invocationId/capabilityId is required because the component may not have
+ * received the governed invocation yet. Direct/in-process adapters may not need it.
+ */
+export interface ComponentReadyMessage extends ProtocolEnvelopeBase {
   readonly messageId: string;
-  readonly invocationId: string;
+  readonly type: "READY";
   readonly componentId: string;
   readonly componentVersion: string;
-  readonly capabilityId: string;
+  readonly occurredAt: string;
+  readonly supportedProtocolVersions: readonly ComponentProtocolVersion[];
+}
+
+interface ComponentControlBase
+  extends ProtocolEnvelopeBase,
+    ExactInvocationIdentity {
+  readonly messageId: string;
 }
 
 /**
@@ -97,7 +118,7 @@ export type ComponentControlMessage =
     });
 
 export type CoreComponentEventType =
-  | "READY"
+  | "INITIALIZED"
   | "OBSERVATION"
   | "ATTEMPT_SUBMITTED"
   | "STATE_CHANGED"
@@ -112,16 +133,13 @@ export type ComponentEventType =
   | ExtensionComponentEventType;
 
 /**
- * Transport-neutral component -> host event envelope. The payload schema is
- * family-owned and explicitly identified so Foundry/Codex can validate it.
+ * Transport-neutral post-INIT component -> host event envelope. The payload schema
+ * is family-owned and explicitly identified so Foundry/Codex can validate it.
  */
-export interface ComponentEvent {
-  readonly protocolVersion: ComponentProtocolVersion;
+export interface ComponentEvent
+  extends ProtocolEnvelopeBase,
+    ExactInvocationIdentity {
   readonly eventId: string;
-  readonly invocationId: string;
-  readonly componentId: string;
-  readonly componentVersion: string;
-  readonly capabilityId: string;
   readonly occurredAt: string;
   readonly type: ComponentEventType;
   readonly payload?: SchemaBoundPayload;
