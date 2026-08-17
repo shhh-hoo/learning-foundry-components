@@ -3,14 +3,16 @@
 
 import type {
   ComponentProtocolVersion,
+  JsonValue,
   SchemaReference,
 } from "./capability";
 
 export type CapabilityRunMode = "PRODUCT" | "PREVIEW" | "EVAL";
 
+/** Protocol payloads stay JSON-serializable across local, iframe and network transports. */
 export interface SchemaBoundPayload {
   readonly schema: SchemaReference;
-  readonly data: unknown;
+  readonly data: JsonValue;
 }
 
 /**
@@ -30,6 +32,7 @@ export interface LearningCapabilityExecution {
 export type LearningCapabilityExecutionStatus =
   | "STARTED"
   | "COMPLETED"
+  | "CANCELLED"
   | "FAILED";
 
 export interface ProtocolIssue {
@@ -81,7 +84,7 @@ export type ComponentControlMessage =
       readonly execution: LearningCapabilityExecution;
     })
   | (ComponentControlBase & {
-      readonly type: "RESET" | "PAUSE" | "RESUME";
+      readonly type: "RESET" | "PAUSE" | "RESUME" | "CANCEL";
     })
   | (ComponentControlBase & {
       readonly type: "RESTORE";
@@ -94,6 +97,7 @@ export type CoreComponentEventType =
   | "ATTEMPT_SUBMITTED"
   | "STATE_CHANGED"
   | "COMPLETED"
+  | "CANCELLED"
   | "ERROR";
 
 /** Component families may add namespaced event types without changing v1. */
@@ -117,4 +121,13 @@ export interface ComponentEvent {
   readonly type: ComponentEventType;
   readonly payload?: SchemaBoundPayload;
   readonly issues?: readonly ProtocolIssue[];
+}
+
+/** Optional adapter-level ports; transports may implement these with callbacks, postMessage, etc. */
+export interface ComponentEventSink {
+  emit(event: ComponentEvent): void | Promise<void>;
+}
+
+export interface ComponentControlHandler {
+  handle(message: ComponentControlMessage): void | Promise<void>;
 }
