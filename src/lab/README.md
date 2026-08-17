@@ -20,6 +20,7 @@ Representative fixtures should cover, where relevant:
 - repeated attempt;
 - reset;
 - restore when declared by the capability;
+- cancel/abandon when declared or meaningful;
 - malformed/unsupported input;
 - narrow/mobile layout;
 - keyboard interaction;
