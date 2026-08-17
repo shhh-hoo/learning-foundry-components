@@ -1,12 +1,12 @@
 # Component Protocol
 
-This directory owns the smallest stable contract needed for Learning Foundry to **discover, match, configure, execute, observe, and resume** a governed learning capability.
+This directory owns the smallest stable contract needed for Learning Foundry to **discover, match, configure, execute, observe, restore, and terminate** a governed learning capability.
 
 The design target is deliberately narrow:
 
 - stable enough that adding normal component families should not require base-protocol changes;
 - explicit enough for Agent/Codex pairing and validation;
-- transport-neutral;
+- transport-neutral and JSON-serializable;
 - agnostic to subject, UI framework, and component-family evidence shape;
 - small enough that component authors do not need to learn a platform-sized framework.
 
@@ -22,13 +22,13 @@ LearningRequestDescriptor
   └─ preflight(...) -> CapabilityFitResult[]
 
 LearningCapabilityExecution
-  └─ exact component + capability + configuration schema
+  └─ exact component + capability + schema-bound configuration
 
 ComponentControlMessage / ComponentEvent
   └─ minimal interactive lifecycle
 
 LearningCapabilityExecutionResult
-  └─ terminal or started execution result
+  └─ started / terminal execution result
 ```
 
 Everything domain-specific belongs behind a component-family schema.
@@ -43,8 +43,10 @@ Instead:
 
 ```ts
 {
+  manifestSchemaVersion: "1.0.0",
   componentId: "classification-workspace",
   componentVersion: "1.2.0",
+  componentType: "workspace",
   capabilities: [
     {
       capabilityId: "classify-items",
@@ -52,23 +54,26 @@ Instead:
       executionModel: "INTERACTIVE",
       configurationSchema: {
         id: "foundry.classification.config",
-        version: "1.0.0"
+        version: "1.0.0",
+        format: "JSON_SCHEMA"
       },
       resultSchema: {
         id: "foundry.classification.result",
-        version: "1.0.0"
+        version: "1.0.0",
+        format: "JSON_SCHEMA"
       },
       stateSchema: {
         id: "foundry.classification.state",
-        version: "1.0.0"
+        version: "1.0.0",
+        format: "JSON_SCHEMA"
       },
-      supportedControls: ["RESET", "RESTORE"]
+      supportedControls: ["RESET", "RESTORE", "CANCEL"]
     }
   ]
 }
 ```
 
-The protocol understands the schema **identity**, not its family-specific fields.
+The protocol understands schema **identity and interchange format**, not family-specific fields.
 
 This gives Foundry and AI developers enough information to pair a capability with valid configuration/result/state schemas without forcing every component into one giant universal payload.
 
@@ -98,7 +103,7 @@ If a component needs an experimental or domain-specific action, use a namespaced
 EXT:CHEMISTRY_COMPARE_RESONANCE
 ```
 
-Do not change the base protocol merely to add a niche action label. A future protocol release may promote widely reused extension vocabulary to the core list without changing component payload semantics.
+Do not change the base protocol merely to add a niche action label. Widely reused extension vocabulary can later be promoted without changing component payload semantics.
 
 ## 3. Preflight reports fit facts, not orchestration policy
 
@@ -138,7 +143,7 @@ It should **not** decide:
 
 Foundry Core/Resolver owns invoke/interpreter/fallback policy.
 
-Because one component may expose several capabilities, `preflight(...)` returns fit facts for the relevant candidate capabilities rather than one opaque component-wide verdict.
+Because one component may expose several capabilities, `preflight(...)` returns fit facts for relevant candidate capabilities rather than one opaque component-wide verdict.
 
 ## 4. Exact version identity is mandatory at execution
 
@@ -150,7 +155,7 @@ stable
 ^1.2
 ```
 
-but those aliases must be resolved **before** constructing `LearningCapabilityExecution`.
+but aliases must be resolved **before** constructing `LearningCapabilityExecution`.
 
 The execution boundary requires:
 
@@ -164,30 +169,37 @@ protocolVersion
 
 This is required for:
 
-- reproducible Agent evals;
+- reproducible evals;
 - trace replay;
 - evidence provenance;
 - debugging;
 - deterministic restore;
 - AI-generated integration code that does not silently drift to a newer implementation.
 
-## 5. Schema-bound payloads make generic runtime data machine-readable
+## 5. Schema-bound JSON payloads are the main extensibility mechanism
 
-The base protocol does not define a universal classification/configuration/result JSON shape.
+The base protocol does not define one universal classification/configuration/result object.
 
-Instead every generic payload uses:
+Every generic payload instead carries:
 
 ```ts
 {
   schema: {
     id: "...",
-    version: "..."
+    version: "...",
+    format: "JSON_SCHEMA"
   },
-  data: ...
+  data: ... // JSON-serializable
 }
 ```
 
-Examples of family schemas may include:
+`JSON_SCHEMA` is the baseline interchange format because it can be inspected by Foundry, Codex, validation tooling, and remote adapters without importing component implementation code. A component may still use Zod, TypeScript types, or another validator internally.
+
+`SchemaReference.uri` is optional. A deployment may resolve `id + version` through a registry; another may publish a directly resolvable schema URI.
+
+Protocol data is intentionally JSON-only. Browser/framework objects, DOM nodes, Files, ArrayBuffers, WebGL handles, etc. do not cross the generic boundary. Binary/media resources should be represented by stable asset IDs/URLs/references inside family schemas.
+
+Examples:
 
 ```text
 foundry.classification.config@1.0.0
@@ -196,7 +208,13 @@ foundry.mechanism.state@2.1.0
 foundry.calculation.diagnostic-result@3.0.0
 ```
 
-This is the main extensibility mechanism: new component families add schemas, **not new base-protocol fields**.
+This is how normal future growth should happen:
+
+```text
+new component family
+→ new versioned schemas
+→ same base protocol
+```
 
 ## 6. Two execution models
 
@@ -220,7 +238,7 @@ execute(...)
 
 ### INTERACTIVE
 
-Suitable for a learner-facing component that remains active while the learner manipulates, retries, submits, resets, or restores state.
+Suitable for a learner-facing component that remains active while the learner manipulates, retries, submits, resets, restores, or exits early.
 
 Typical execution:
 
@@ -231,10 +249,12 @@ execute(...)
 then:
 ComponentEvent...
 ComponentEvent...
-COMPLETED
+COMPLETED / CANCELLED / ERROR
 ```
 
-The current `LearningCapabilityRuntime.execute(...)` seam remains small. Transport adapters may use React callbacks, `postMessage`, iframe bridges, provider adapters, or another mechanism; the protocol standardizes the envelopes, not the transport.
+`LearningCapabilityRuntime.execute(...)` remains deliberately small. Transport adapters may use React callbacks, `postMessage`, iframe bridges, provider adapters, or network transports; the protocol standardizes identities and envelopes, not transport technology.
+
+For adapters that benefit from a code-level port, v1 also exposes tiny `ComponentEventSink` and `ComponentControlHandler` interfaces without requiring any particular event bus.
 
 ## 7. Minimal interactive lifecycle
 
@@ -246,9 +266,10 @@ RESET
 RESTORE
 PAUSE
 RESUME
+CANCEL
 ```
 
-A capability declares which optional controls it supports. `INIT` is represented by the governed execution itself; the INIT control envelope exists for transports that require message-based initialization.
+A capability declares which optional controls it supports. `INIT` carries the governed execution for message-based transports. `CANCEL` gives the host a cross-component way to represent an abandoned/terminated activity without pretending it completed successfully.
 
 Component -> Host uses core `ComponentEvent` types:
 
@@ -258,6 +279,7 @@ OBSERVATION
 ATTEMPT_SUBMITTED
 STATE_CHANGED
 COMPLETED
+CANCELLED
 ERROR
 ```
 
@@ -275,7 +297,7 @@ spectrumRegionSelected
 
 belong in family-specific payload schemas or namespaced `EXT:*` events.
 
-The base envelope only standardizes:
+The base envelope standardizes only:
 
 ```text
 protocol/version identity
@@ -283,7 +305,7 @@ component/capability identity
 invocation correlation
 timestamp
 event type
-schema-bound payload
+schema-bound JSON payload
 issues/errors
 ```
 
@@ -299,7 +321,7 @@ EVAL
 
 `PREVIEW` supports Component Lab without pretending it is a production learner session.
 
-`EVAL` is deliberately generic; the protocol should not encode one specific evaluation harness name such as `AGENT_EVAL`.
+`EVAL` is deliberately generic; the protocol should not encode one particular evaluation harness name such as `AGENT_EVAL`.
 
 ## 9. Responsibility boundary
 
@@ -312,7 +334,7 @@ It may report:
 - component-computed correctness or constraint violations;
 - hints/scaffolds used;
 - retries/changes;
-- completion/error state;
+- completion/cancellation/error state;
 - bounded deterministic diagnosis explicitly assigned by a family contract;
 - traceable structured result data.
 
@@ -366,18 +388,30 @@ force every future component into it
 
 ## 11. Conformance guardrails
 
-`conformance.ts` provides small dependency-free assertions for:
+`conformance.ts` provides dependency-free assertions for:
 
 - manifest identity and versioning;
 - unique capability IDs;
 - non-empty learning-action declarations;
-- valid schema references;
+- valid schema identity/format references;
 - invalid request-response controls;
 - RESTORE without a state schema;
 - exact version identity at execution;
-- base event-envelope integrity.
+- execution result requirements;
+- INIT identity correlation;
+- base event-envelope requirements.
 
-These checks are intentionally generic. Each family owns additional validation for the schemas it references.
+Examples of enforced semantics include:
+
+```text
+COMPLETED result -> must contain schema-bound result
+FAILED result -> must contain issue(s)
+RESTORE support -> must declare state schema
+ERROR event -> must contain issue(s)
+STATE_CHANGED / ATTEMPT_SUBMITTED / COMPLETED event -> must contain payload
+```
+
+These checks are intentionally generic. Each family owns validation for the schemas it references.
 
 Codex/component CI should run base conformance plus family-specific validation rather than inventing component-local protocol variants.
 
@@ -392,6 +426,7 @@ The purpose of v1 stability is to make normal component growth **additive**.
 - a new open-source adapter;
 - a new namespaced learning action;
 - a new namespaced event;
+- a new namespaced schema format when genuinely needed;
 - new optional capability metadata;
 - a new content fixture;
 - a new interaction primitive.
@@ -402,7 +437,7 @@ A minor/additive change may:
 
 - add optional fields;
 - add new namespaced vocabulary conventions;
-- add new helper/conformance functions;
+- add helper/conformance functions;
 - document stronger authoring guidance.
 
 Existing required fields and existing semantics must not be reinterpreted.
@@ -441,19 +476,19 @@ preflight fit facts
         ↓
 Foundry selects exact component@version/capability
         ↓
-read configurationSchema
+resolve configurationSchema (JSON Schema baseline)
         ↓
-generate + validate configuration
+generate + validate JSON configuration
         ↓
 LearningCapabilityExecution
         ↓
 REQUEST_RESPONSE result
 or INTERACTIVE lifecycle
         ↓
-validate result/event payload by schema reference
+resolve + validate result/event payload schema
 ```
 
-This is intentionally easier for AI development than interpreting unrelated prose arrays or reverse-engineering each component's local APIs.
+This is intentionally easier for AI development than interpreting unrelated prose arrays or reverse-engineering each component's local API.
 
 ## 14. Open-source reuse is orthogonal to the protocol
 
