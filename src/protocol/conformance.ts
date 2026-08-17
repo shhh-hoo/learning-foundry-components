@@ -122,6 +122,7 @@ export function assertExecutionConforms(execution: LearningCapabilityExecution):
   assertProtocolEnvelope(execution, "execution");
   assertExactIdentity(execution, "execution");
   assertSchemaReference(execution.configuration.schema, "configuration.schema");
+  if (execution.initialState) assertSchemaReference(execution.initialState.schema, "initialState.schema");
 }
 
 export function assertExecutionResultConforms(result: LearningCapabilityExecutionResult): void {
