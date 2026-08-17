@@ -65,22 +65,30 @@ export function assertManifestConforms(manifest: ComponentCapabilityManifest): v
       capability.learningActions.every((action) => action !== "EXT:"),
       `${label}.learningActions contains an empty extension action.`,
     );
-    invariant(
-      capability.supportedControls?.every((control) => control !== "EXT:") ?? true,
-      `${label}.supportedControls contains an empty extension control.`,
-    );
     assertSchemaReference(capability.configurationSchema, `${label}.configurationSchema`);
     assertSchemaReference(capability.resultSchema, `${label}.resultSchema`);
     if (capability.stateSchema) assertSchemaReference(capability.stateSchema, `${label}.stateSchema`);
 
     if (capability.executionModel === "REQUEST_RESPONSE") {
       invariant(
-        !capability.supportedControls || capability.supportedControls.length === 0,
-        `${label}.supportedControls is only valid for INTERACTIVE capabilities.`,
+        !capability.controls || capability.controls.length === 0,
+        `${label}.controls is only valid for INTERACTIVE capabilities.`,
       );
     }
-    if (capability.supportedControls?.includes("RESTORE")) {
-      invariant(Boolean(capability.stateSchema), `${label} supports RESTORE but has no stateSchema.`);
+
+    const controlTypes = new Set<string>();
+    for (const [controlIndex, control] of (capability.controls ?? []).entries()) {
+      const controlLabel = `${label}.controls[${controlIndex}]`;
+      invariant(control.type !== "EXT:", `${controlLabel}.type contains an empty extension control.`);
+      invariant(!controlTypes.has(control.type), `${label} declares duplicate control ${control.type}.`);
+      controlTypes.add(control.type);
+      if (control.payloadSchema) assertSchemaReference(control.payloadSchema, `${controlLabel}.payloadSchema`);
+      if (!control.type.startsWith("EXT:")) {
+        invariant(!control.payloadSchema, `${controlLabel} core controls must use their protocol-defined payload semantics.`);
+      }
+      if (control.type === "RESTORE") {
+        invariant(Boolean(capability.stateSchema), `${label} supports RESTORE but has no stateSchema.`);
+      }
     }
   }
 }
