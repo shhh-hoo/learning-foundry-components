@@ -1,29 +1,27 @@
 ---
 name: foundry-component-development
-description: Build or extend Learning Foundry learning components, interaction primitives, or component integrations. Use for substantial component work. Requires evidence-first design, mandatory open-source reuse research, the stable Foundry component protocol, versioned family schemas, and Component Lab QA. Do not use for Foundry orchestration, learner-model, curriculum-planning, or Dify workflow work.
+description: Build or extend Learning Foundry Components, interaction primitives, adapters, or component-family schemas. Use for substantial component work. Requires evidence-first design, reuse-first open-source research, the stable Foundry component protocol, machine-readable schemas, and Component Lab QA. Do not use for Foundry orchestration, learner models, curriculum planning, or Dify workflow work.
 ---
 
 # Foundry Component Development
 
-Build bounded learning capabilities that can be independently implemented, tested, reviewed, reused, and paired with Foundry by an AI agent.
+Build bounded learning capabilities behind one stable protocol. Expand learning-action coverage; do not maximize Component count.
 
-The goal is not maximum component count. The goal is broad **learning-action coverage** behind one stable protocol.
+## 1. Read the contract before coding
 
-## 1. Load the repository contract first
+Read, in order:
 
-Before planning implementation:
+1. `AGENTS.md`
+2. every file in `src/protocol/`
+3. `.agents/skills/foundry-component-development/references/learning-action-matrix.md`
+4. `.agents/skills/foundry-component-development/references/component-contract-template.md`
+5. relevant existing Components/primitives/adapters/family schemas
 
-1. Read `AGENTS.md`.
-2. Read `src/protocol/README.md` and every file under `src/protocol/`.
-3. Read `.agents/skills/foundry-component-development/references/learning-action-matrix.md`.
-4. Read `.agents/skills/foundry-component-development/references/component-contract-template.md`.
-5. Search this repository for an existing component, schema, adapter, or primitive that overlaps the request.
+`src/protocol/` is authoritative. Never invent a parallel protocol in one Component.
 
-Repository protocol code is authoritative. Never create a parallel component protocol inside one task.
+## 2. Start from learning demand and evidence
 
-## 2. Define the learning demand before choosing UI
-
-Write a compact brief:
+Before choosing UI, write:
 
 ```text
 Learning demand:
@@ -32,11 +30,11 @@ Observable evidence wanted:
 Failure / partial-success signals:
 Content variability:
 Domain-specific or reusable:
-Likely interaction modalities:
+Likely interaction:
 Existing Foundry overlap:
 ```
 
-Prefer the core action vocabulary when it fits:
+Prefer core actions when they fit:
 
 ```text
 RECALL
@@ -54,74 +52,35 @@ EXPLAIN
 TRANSFER
 ```
 
-Use `EXT:<NAMESPACED_ACTION>` for a genuinely useful domain/experimental action instead of changing the base protocol.
+Use `EXT:<NAMESPACED_ACTION>` when a genuinely useful action does not fit. Do not edit the protocol merely to add a topic-specific label.
 
-Do not start from "make a drag-and-drop component" or "make an equilibrium component". Drag/drop is a primitive; equilibrium is content. A component is justified by learner action plus useful evidence.
+A drag/drop widget is a primitive. `equilibrium` is content. Neither alone defines a learning Component.
 
-## 3. Inspect local reuse first
+## 3. Reuse before build
 
-Search for:
+Search in this order:
 
-- the same learning action;
-- an existing component family;
-- interaction primitives;
-- state/reset/restore helpers;
-- family schemas and validators;
-- telemetry/evidence helpers;
-- design-system primitives;
-- fixtures and tests.
+1. existing local Component/family/primitive;
+2. open-source educational tool solving the same learner action;
+3. open-source interaction primitive;
+4. mature domain/scientific engine;
+5. only then build new.
 
-Prefer composition and extension over duplication.
-
-Do not independently reimplement drag/drop, graph rendering, math input, chart annotation, canvas manipulation, state restoration, validation, or accessibility helpers when a suitable local primitive already exists.
-
-## 4. Open-source discovery is mandatory
-
-Before substantial new implementation, search in this order.
-
-### A. Exact or near-exact learning tool
-
-Look for an open-source educational activity, simulator, editor, tutor, visualizer, or assessment interaction that already performs the learner action.
-
-### B. Interaction primitive
-
-If no suitable learning tool exists, search the underlying primitive:
+For serious external candidates record:
 
 ```text
-sortable / drag-drop / matching
-node-edge graph editing
-math/equation input
-chart/table/spectrum annotation
-2D/3D molecule rendering
-canvas/object manipulation
-timeline/sequence editing
-```
-
-### C. Domain engine
-
-Before reimplementing difficult deterministic logic, search for mature engines for symbolic algebra, chemistry representation, graph algorithms, plotting, scientific simulation, geometry, or rendering.
-
-A third-party engine may own technical machinery. Foundry still owns the learning interaction, protocol adapter, schema/evidence semantics, and learner-facing UX.
-
-## 5. Evaluate serious reuse candidates
-
-For every serious candidate, record:
-
-```text
-Candidate:
-Repository/package:
-Version or commit reviewed:
-What it solves:
-License:
-Maintenance signal:
-Runtime/framework fit:
-Accessibility status:
-Bundle/runtime cost:
-Privacy/network behavior:
-Modification needed:
-Protocol adaptation needed:
-Main risks:
-Decision:
+Candidate + version/commit
+What it solves
+License
+Maintenance signal
+Runtime/framework fit
+Accessibility
+Privacy/network behavior
+Bundle/runtime cost
+Adaptation needed
+Protocol adaptation needed
+Risks
+Decision
 ```
 
 Allowed decisions:
@@ -134,17 +93,15 @@ REUSE_IDEA_ONLY
 BUILD_NEW
 ```
 
-Do not default to `BUILD_NEW` merely because coding is faster than investigating reuse.
+Do not choose `BUILD_NEW` merely because writing code is faster than evaluating reuse.
 
-Reject reuse when rights are unclear, the project is structurally inaccessible/insecure, incompatible or abandoned, vastly oversized for the capability, or harder to adapt than a bounded clean implementation.
+Never copy code/assets with unclear rights.
 
-## 6. Define the component contract before implementation
+## 4. Define the Component contract first
 
-Use `references/component-contract-template.md`.
+Use the contract template.
 
-Each concrete component must have one manifest with one or more independently matchable `capabilities[]`.
-
-Each capability must bind together:
+Each Component has one manifest. Each independently matchable function is one `capabilities[]` entry binding:
 
 ```text
 capabilityId
@@ -153,28 +110,26 @@ executionModel
 configurationSchema
 resultSchema
 optional stateSchema
-optional controls[] descriptors
+optional controls[]
 requirements / limitations
 ```
 
-This binding is mandatory. Do not recreate the old ambiguous pattern of component-wide unrelated `learningActions[]`, `inputs[]`, and `outputs[]`.
+Do not recreate component-wide unrelated `actions[]`, `inputs[]`, `outputs[]`.
 
 ### Family schemas
 
-Keep payload semantics in versioned family schemas rather than adding fields to the base protocol.
-
-At minimum define:
+At minimum define versioned:
 
 ```text
 configuration schema
 result schema
 ```
 
-Stateful interactive components should also define a state schema. Family-specific observations/events/extension controls should identify their payload schema.
+Stateful interactive capabilities also define a state schema. Family-specific event/control payloads use their own schema IDs.
 
-`JSON_SCHEMA` is the baseline protocol interchange format so Foundry, Codex, and runtime validation can inspect configuration/evidence shapes without importing implementation code. Local code may additionally use Zod/TypeScript/etc.
+Use `JSON_SCHEMA` as the protocol-visible baseline. Local code may additionally use Zod/TypeScript.
 
-All generic protocol payloads must be JSON-serializable. Represent binary/media resources by stable asset references rather than passing framework/browser objects across the protocol.
+All protocol payloads must be JSON-serializable. Use stable asset references for media/binary resources.
 
 ### Preflight
 
@@ -189,30 +144,49 @@ missingRequirements
 limitations
 ```
 
-It must not decide Foundry routing such as "call interpreter", "fall back to chat", or "change the learning plan".
+It must not decide interpreter/fallback/chat/learning-plan policy.
 
-### Exact identity
+## 5. Keep capability and deployment separate
 
-A registry may resolve aliases, but execution must use exact:
+`ComponentCapabilityManifest` describes what an exact Component version can do.
+
+`ComponentDeploymentBinding` describes how one deployment launches it.
+
+Do not put iframe URLs, provider endpoints, package exports, or framework-specific launch details in the capability manifest.
+
+Use an adapter-specific schema-bound `runtimeConfiguration` instead.
+
+## 6. Use exact identity
+
+A registry may resolve `latest`, but execution must use exact:
 
 ```text
+protocol = foundry-component
+protocolVersion
 componentId
 componentVersion
 capabilityId
 invocationId
 ```
 
-Never execute `latest` implicitly.
+Never execute an unresolved version alias.
 
-## 7. Choose the correct execution model
+## 7. Choose the execution model
 
-Use `REQUEST_RESPONSE` for bounded operations that return directly.
+### REQUEST_RESPONSE
 
-Use `INTERACTIVE` when a learner remains inside the component while manipulating, retrying, submitting, resetting, restoring state, or exiting early.
+Use when the capability can return a bounded result directly.
 
-For interactive components use the generic lifecycle only for cross-component semantics:
+### INTERACTIVE
+
+Use when a learner remains inside the Component while manipulating/retrying/submitting/restoring.
+
+The stable lifecycle is:
 
 ```text
+pre-INIT Component -> Host
+READY
+
 Host -> Component
 INIT
 RESET
@@ -222,8 +196,8 @@ RESUME
 CANCEL
 EXT:<FAMILY_CONTROL>
 
-Component -> Host
-READY
+post-INIT Component -> Host
+INITIALIZED
 OBSERVATION
 ATTEMPT_SUBMITTED
 STATE_CHANGED
@@ -233,49 +207,31 @@ ERROR
 EXT:<FAMILY_EVENT>
 ```
 
-Core controls use protocol-defined semantics. If a family-specific host control needs payload data, declare it as an `EXT:*` control descriptor with a versioned payload schema.
+Important semantics:
 
-Do not add every domain gesture to the base protocol. Put `itemMoved`, `bondCreated`, `parameterChanged`, etc. in family-specific payload schemas or namespaced `EXT:*` events/controls.
+- `READY` is pre-INIT and does not require invocation/capability identity.
+- `INIT` carries the exact governed execution.
+- execution may include `initialState`; apply it before emitting `INITIALIZED`.
+- `RESTORE` is for later runtime restoration.
+- do not promote domain gestures such as `itemMoved`, `bondCreated`, or `parameterChanged` into core events.
 
-## 8. Implement behind the Foundry boundary
+## 8. Preserve the Foundry evidence boundary
 
-Use this shape:
-
-```text
-Foundry typed invocation
-        ↓
-component / adapter
-        ↓
-reused library, primitive, or engine
-        ↓
-family-owned structured observations/results
-        ↓
-Foundry protocol envelope
-```
-
-Foundry Components owns:
-
-- component identity/version;
-- capability descriptors;
-- family schemas and validation;
-- learner-facing interaction shell;
-- state lifecycle when applicable;
-- bounded learner observations/results;
-- adapters;
-- component-level tests/fixtures.
-
-Foundry Core owns durable pedagogy and orchestration.
-
-If a requirement appears to need a base-protocol change, first test whether it belongs in:
+Components may own bounded deterministic logic and report:
 
 ```text
-family schema
-EXT action/event/control
-transport adapter
-Foundry orchestration
+learner actions
+submitted work/state
+correctness/constraint violations when deterministic
+assistance/hints
+retries/changes
+completion/cancellation/errors
+family-owned bounded diagnosis
 ```
 
-Only propose a base change when those boundaries cannot express it cleanly. Keep the protocol change separate from the component implementation when practical.
+Foundry Core owns durable interpretation, learner position/mastery, learning-plan changes, curriculum routing, and long-term pedagogy.
+
+Do not claim mastery from one activity.
 
 ## 9. Parameterize content
 
@@ -289,69 +245,69 @@ content/configuration
 evidence mapping
 ```
 
-Do not bake one textbook example into generic component logic. Subject examples belong in fixtures/configuration unless the component is intentionally domain-specific.
+Do not hard-code one syllabus example into generic interaction logic unless the Component is intentionally domain-specific.
 
-## 10. Build for Component Lab first
+## 10. Build for Component Lab
 
-Interactive components should run without a complete Foundry learner session whenever practical.
+Interactive Components should run independently in `PREVIEW` mode.
 
-Use `runMode: "PREVIEW"` in the lab and provide relevant fixtures for:
+Fixtures should cover as relevant:
 
 ```text
-normal success
+success
 incorrect / partial response
 repeated attempt
 reset
-restore when supported
-cancel/abandon when relevant
-malformed/unsupported input
-narrow/mobile viewport
+initial state
+restore
+cancel/abandon
+malformed input
+mobile/narrow viewport
 keyboard interaction
 ```
 
-Passing TypeScript is not visual QA. Inspect the rendered interaction.
+Passing typecheck is not visual QA. Inspect the rendered interaction.
 
-## 11. Produce evidence, not fake learner-state certainty
+## 11. Validate before completion
 
-Prefer bounded observations:
-
-```text
-what the learner did
-submitted state/result
-changes/retries
-assistance used
-component-computed correctness/constraints
-target/configuration identity
-completion/cancellation/error/timing signals
-```
-
-Do not invent durable claims such as:
+Run:
 
 ```text
-mastery = 0.82
-student understands X
-change learning plan to Y
+assertManifestConforms
+assertDeploymentBindingConforms (when deployed)
+assertExecutionConforms
+assertReadyMessageConforms (when handshake is used)
+assertControlMessageConforms
+assertComponentEventConforms
+assertExecutionResultConforms
+family schema validation
 ```
 
-unless a governed family explicitly owns a deterministic bounded diagnosis.
+Also verify:
 
-## 12. Verify protocol conformance
+- exact component version;
+- JSON-serializable payloads;
+- declared reset/restore/cancel flows;
+- accessibility basics;
+- real rendered UI;
+- open-source license/provenance;
+- no local event bus/persistence/Agent protocol;
+- no direct LLM dependency unless explicitly architected.
 
-Before declaring complete:
+## 12. Treat base protocol changes as exceptional
 
-1. run `assertManifestConforms`;
-2. validate family configuration/result/state/control schemas;
-3. ensure protocol payload data is JSON-serializable;
-4. ensure execution uses an exact component version;
-5. run base execution/result/event/control conformance where applicable;
-6. run unit/type/build/lint checks available in the repo;
-7. verify Component Lab fixtures;
-8. verify reset/restore/cancel/extension controls when declared;
-9. verify keyboard/accessibility basics;
-10. inspect the rendered visual interaction;
-11. record reused source/license/provenance;
-12. confirm no local event bus/persistence/Agent protocol was invented;
-13. confirm no direct LLM dependency unless explicitly required by architecture.
+Before proposing a base change, prove the need cannot be expressed as:
+
+```text
+family schema
+EXT action/event/control
+deployment/transport adapter
+Foundry orchestration
+```
+
+Normal Component work should add schemas/adapters/components, not mutate v1.
+
+For current product integration, remember `learning-foundry-mvp` is the runnable vertical slice and still uses Runtime Protocol v0.1. Read `docs/learning-foundry-mvp-v0.1-compatibility.md` when integrating with it; do not silently rewrite either repository's boundary.
 
 ## 13. Completion report
 
@@ -363,47 +319,14 @@ Capabilities:
 Learning action(s):
 Execution model:
 Schemas:
-Controls/events:
+Deployment/reuse decision:
 Evidence produced:
-Reuse decision:
+Controls/events:
 Open-source dependencies/sources:
-Protocol integration:
 Files changed:
-Tests/verification:
+Verification:
 Known limitations:
-New reusable primitive(s):
+New reusable primitives:
 ```
 
-If no open-source code was reused, list serious candidates evaluated and why each was rejected.
-
-## Anti-patterns
-
-Do not:
-
-- start substantial coding before reuse research;
-- create one component per syllabus topic when a parameterized capability can cover many topics;
-- confuse a UI primitive with a learning capability;
-- copy code/assets with unclear licensing;
-- vendor an entire application for one small primitive;
-- let a dependency become canonical Foundry learner/product state;
-- invent component-specific base protocol fields;
-- invent a component-specific event bus or persistence layer;
-- let preflight make Foundry routing policy;
-- execute an unresolved/latest component version;
-- pass non-serializable framework/browser objects through the generic protocol;
-- return only `correct: true/false` when richer bounded evidence is naturally available;
-- claim mastery from one activity;
-- redesign Foundry Core inside a component task.
-
-## Default optimization order
-
-When trade-offs are unclear, optimize in this order:
-
-1. preserve stable protocol compatibility;
-2. reuse mature open-source primitives/domain logic;
-3. preserve useful structured learner evidence;
-4. minimize component-specific infrastructure;
-5. make the interaction reusable across content;
-6. accessibility and interaction quality;
-7. visual polish;
-8. domain-specific convenience.
+If no open-source implementation was reused, list serious candidates evaluated and concrete rejection reasons.
