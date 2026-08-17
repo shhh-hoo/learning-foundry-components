@@ -153,7 +153,7 @@ executionModel
 configurationSchema
 resultSchema
 optional stateSchema
-optional supportedControls
+optional controls[] descriptors
 requirements / limitations
 ```
 
@@ -170,7 +170,7 @@ configuration schema
 result schema
 ```
 
-Stateful interactive components should also define a state schema. Family-specific observations/events should identify their payload schema.
+Stateful interactive components should also define a state schema. Family-specific observations/events/extension controls should identify their payload schema.
 
 `JSON_SCHEMA` is the baseline protocol interchange format so Foundry, Codex, and runtime validation can inspect configuration/evidence shapes without importing implementation code. Local code may additionally use Zod/TypeScript/etc.
 
@@ -220,6 +220,7 @@ RESTORE
 PAUSE
 RESUME
 CANCEL
+EXT:<FAMILY_CONTROL>
 
 Component -> Host
 READY
@@ -229,9 +230,12 @@ STATE_CHANGED
 COMPLETED
 CANCELLED
 ERROR
+EXT:<FAMILY_EVENT>
 ```
 
-Do not add every domain gesture to the base protocol. Put `itemMoved`, `bondCreated`, `parameterChanged`, etc. in family-specific payload schemas or namespaced `EXT:*` events.
+Core controls use protocol-defined semantics. If a family-specific host control needs payload data, declare it as an `EXT:*` control descriptor with a versioned payload schema.
+
+Do not add every domain gesture to the base protocol. Put `itemMoved`, `bondCreated`, `parameterChanged`, etc. in family-specific payload schemas or namespaced `EXT:*` events/controls.
 
 ## 8. Implement behind the Foundry boundary
 
@@ -266,7 +270,7 @@ If a requirement appears to need a base-protocol change, first test whether it b
 
 ```text
 family schema
-EXT action/event
+EXT action/event/control
 transport adapter
 Foundry orchestration
 ```
@@ -336,13 +340,13 @@ unless a governed family explicitly owns a deterministic bounded diagnosis.
 Before declaring complete:
 
 1. run `assertManifestConforms`;
-2. validate family configuration/result/state schemas;
+2. validate family configuration/result/state/control schemas;
 3. ensure protocol payload data is JSON-serializable;
 4. ensure execution uses an exact component version;
 5. run base execution/result/event/control conformance where applicable;
 6. run unit/type/build/lint checks available in the repo;
 7. verify Component Lab fixtures;
-8. verify reset/restore/cancel for declared controls;
+8. verify reset/restore/cancel/extension controls when declared;
 9. verify keyboard/accessibility basics;
 10. inspect the rendered visual interaction;
 11. record reused source/license/provenance;
@@ -359,6 +363,7 @@ Capabilities:
 Learning action(s):
 Execution model:
 Schemas:
+Controls/events:
 Evidence produced:
 Reuse decision:
 Open-source dependencies/sources:
