@@ -1,4 +1,5 @@
 export {
+  COMPONENT_PROTOCOL_NAME,
   COMPONENT_PROTOCOL_VERSION,
 } from "./capability";
 
@@ -9,6 +10,7 @@ export type {
   CapabilityFitResult,
   ComponentCapabilityInspector,
   ComponentCapabilityManifest,
+  ComponentProtocolName,
   ComponentProtocolVersion,
   CoreInteractiveControl,
   CoreLearningAction,
@@ -25,12 +27,18 @@ export type {
 } from "./capability";
 
 export type {
+  ComponentDeploymentBinding,
+  ComponentRuntimeConfiguration,
+} from "./deployment";
+
+export type {
   CapabilityRunMode,
   ComponentControlHandler,
   ComponentControlMessage,
   ComponentEvent,
   ComponentEventSink,
   ComponentEventType,
+  ComponentReadyMessage,
   CoreComponentEventType,
   ExtensionComponentEventType,
   LearningCapabilityExecution,
@@ -44,7 +52,9 @@ export type {
 export {
   assertComponentEventConforms,
   assertControlMessageConforms,
+  assertDeploymentBindingConforms,
   assertExecutionConforms,
   assertExecutionResultConforms,
   assertManifestConforms,
+  assertReadyMessageConforms,
 } from "./conformance";
