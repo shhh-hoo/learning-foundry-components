@@ -21,16 +21,17 @@ The workflow is intentionally reuse-first. Do not start substantial implementati
 - `src/protocol/` is the authoritative stable base contract.
 - Each independently matchable capability belongs in `manifest.capabilities[]` with its own learning actions, execution model, and versioned configuration/result schemas.
 - Keep component-family payload semantics in family schemas; do not promote them into the base protocol merely for one component.
+- Use JSON Schema as the baseline protocol-visible schema format and keep generic payloads JSON-serializable; represent binary/media through stable references.
 - Preflight reports fit facts only. Foundry owns routing/interpreter/fallback decisions.
 - Resolve an exact component version before execution; do not execute `latest` implicitly.
 - Interactive components use the shared lifecycle envelopes; do not invent a component-specific event bus, persistence layer, or Agent protocol.
-- Use namespaced `EXT:*` actions/events before proposing a base-protocol vocabulary expansion.
+- Use namespaced `EXT:*` actions/events/controls before proposing a base-protocol vocabulary expansion. Bind extension-control payloads through a versioned control descriptor schema when needed.
 - Components report bounded learner actions/results. Foundry owns durable pedagogical interpretation such as mastery, learner position, and learning-plan changes unless a governed family contract explicitly assigns deterministic bounded diagnosis responsibility.
 - Do not call an LLM directly from a component unless an explicit architecture decision requires it.
 - Keep content/configuration separate from the interaction engine whenever practical.
 - Every interactive component should be independently previewable/testable in Component Lab using `PREVIEW` mode before full Foundry integration.
 - Visual QA requires inspecting the rendered interaction, not only passing typecheck/tests.
-- Preserve keyboard/accessibility basics and state reset/restore when declared by the capability.
+- Preserve keyboard/accessibility basics and state reset/restore/cancel when declared by the capability.
 - Run base protocol conformance plus family-schema validation before declaring a component complete.
 
 ## Protocol changes are exceptional
@@ -41,7 +42,7 @@ Before proposing a base-protocol change, prove that the requirement cannot be ex
 
 ```text
 family schema
-namespaced EXT action/event
+namespaced EXT action/event/control
 transport adapter
 Foundry orchestration
 ```
