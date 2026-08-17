@@ -41,12 +41,16 @@ export type CapabilityExecutionModel =
   | "REQUEST_RESPONSE"
   | "INTERACTIVE";
 
-export type InteractiveControl =
+export type CoreInteractiveControl =
   | "RESET"
   | "RESTORE"
   | "PAUSE"
   | "RESUME"
   | "CANCEL";
+
+/** Family-specific host controls may be namespaced without changing v1. */
+export type ExtensionInteractiveControl = `EXT:${string}`;
+export type InteractiveControl = CoreInteractiveControl | ExtensionInteractiveControl;
 
 export type SchemaFormat = "JSON_SCHEMA" | `EXT:${string}`;
 
