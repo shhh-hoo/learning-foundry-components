@@ -87,7 +87,8 @@ export interface ComponentReadyMessage extends ProtocolEnvelopeBase {
   readonly componentId: string;
   readonly componentVersion: string;
   readonly occurredAt: string;
-  readonly supportedProtocolVersions: readonly ComponentProtocolVersion[];
+  /** Strings allow a newer implementation to advertise versions unknown to this v1 type package. */
+  readonly supportedProtocolVersions: readonly string[];
 }
 
 interface ComponentControlBase
