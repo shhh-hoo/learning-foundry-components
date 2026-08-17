@@ -1,6 +1,9 @@
 // Stable generic capability discovery / fit contract.
 // Component-family-specific payloads belong behind schema references, not in this file.
 
+export type ComponentProtocolName = "foundry-component";
+export const COMPONENT_PROTOCOL_NAME: ComponentProtocolName = "foundry-component";
+
 export type ComponentProtocolVersion = "1.0.0";
 export const COMPONENT_PROTOCOL_VERSION: ComponentProtocolVersion = "1.0.0";
 
