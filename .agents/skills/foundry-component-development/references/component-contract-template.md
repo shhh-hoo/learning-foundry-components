@@ -62,7 +62,11 @@ export const manifest: ComponentCapabilityManifest = {
         version: "1.0.0",
         format: "JSON_SCHEMA",
       },
-      supportedControls: ["RESET", "RESTORE", "CANCEL"],
+      controls: [
+        { type: "RESET" },
+        { type: "RESTORE" },
+        { type: "CANCEL" },
+      ],
       limitations: [],
     },
   ],
@@ -70,6 +74,21 @@ export const manifest: ComponentCapabilityManifest = {
 ```
 
 Do not place family-specific payload fields in the base manifest. Put them in the referenced family schemas.
+
+For a family-specific host control, bind its payload schema in the descriptor:
+
+```ts
+{
+  type: "EXT:SET_HINT_LEVEL",
+  payloadSchema: {
+    id: "foundry.example.set-hint-level",
+    version: "1.0.0",
+    format: "JSON_SCHEMA",
+  },
+}
+```
+
+Core controls use their protocol-defined payload semantics and must not redefine a payload schema. `RESTORE` uses the capability's `stateSchema`.
 
 ## 4. Family schemas
 
@@ -86,7 +105,7 @@ Interactive stateful capabilities should also define:
 state schema
 ```
 
-Family-specific observation/event payloads should use their own schema IDs.
+Family-specific observation/event/control payloads should use their own schema IDs.
 
 `JSON_SCHEMA` is the baseline interchange format so Agent/Codex/runtime tooling can inspect configuration and evidence shapes without importing component implementation code. Local code may additionally use Zod, TypeScript types, or other validators.
 
@@ -160,6 +179,7 @@ RESTORE
 PAUSE
 RESUME
 CANCEL
+EXT:<FAMILY_CONTROL>
 
 Component -> Host:
 READY
@@ -169,9 +189,10 @@ STATE_CHANGED
 COMPLETED
 CANCELLED
 ERROR
+EXT:<FAMILY_EVENT>
 ```
 
-Do not promote component-local gestures such as `itemMoved`, `bondCreated`, or `parameterChanged` into the generic protocol. Encode them in family-specific payload schemas or namespaced `EXT:*` events.
+Do not promote component-local gestures such as `itemMoved`, `bondCreated`, or `parameterChanged` into the generic protocol. Encode them in family-specific payload schemas or namespaced `EXT:*` events/controls.
 
 ## 8. Required verification
 
@@ -189,6 +210,7 @@ Before declaring the component complete:
 [ ] reset fixture where relevant
 [ ] restore fixture where supported
 [ ] cancel/abandon flow where relevant
+[ ] extension control payload schemas where used
 [ ] keyboard/accessibility basics
 [ ] structured evidence output
 [ ] open-source provenance/license recorded
