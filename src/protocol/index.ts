@@ -35,6 +35,8 @@ export type {
 
 export {
   assertComponentEventConforms,
+  assertControlMessageConforms,
   assertExecutionConforms,
+  assertExecutionResultConforms,
   assertManifestConforms,
 } from "./conformance";
